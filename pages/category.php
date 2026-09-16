@@ -81,7 +81,11 @@ foreach ($products as $product) {
                     </div>
 
                     <div class="product-details">
-                        <p class="edition"><?php echo $product['edition']; ?></p>
+
+                        <?php if ($product['edition'] != "") { ?>
+                            <p class="edition"><?php echo $product['edition']; ?></p>
+                        <?php } ?>
+
                         <h3><?php echo $product['name']; ?></h3>
                         <p class="price"><?php echo $product['price']; ?></p>
 

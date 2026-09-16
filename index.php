@@ -1,6 +1,14 @@
 <?php
 
-include "css/includes/data.php";
+include "includes/data.php";
+
+$featuredProducts = array();
+
+foreach ($products as $product) {
+    if ($product['featured'] == true) {
+        $featuredProducts[] = $product;
+    }
+}
 
 ?>
 <!DOCTYPE html>
@@ -73,7 +81,7 @@ include "css/includes/data.php";
         <p class="section-text">Check out some of our popular football jerseys.</p>
 
         <div class="product-container">
-            <?php foreach ($products as $product) { ?>
+            <?php foreach ($featuredProducts as $product) { ?>
                 <div class="product-card">
 
                     <div class="product-image">
@@ -86,7 +94,11 @@ include "css/includes/data.php";
                     </div>
 
                     <div class="product-details">
-                        <p class="edition"><?php echo $product['edition']; ?></p>
+
+                        <?php if ($product['edition'] != "") { ?>
+                            <p class="edition"><?php echo $product['edition']; ?></p>
+                        <?php } ?>
+
                         <h3><?php echo $product['name']; ?></h3>
                         <p class="price"><?php echo $product['price']; ?></p>
 
