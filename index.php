@@ -43,7 +43,7 @@ foreach ($products as $product) {
         <nav>
             <a href="index.php">Home</a>
             <a href="#categories">Categories</a>
-            <a href="#products">Jerseys</a>
+            <a href="pages/jerseys.php">Jerseys</a>
             <a href="pages/contact.php">Contact</a>
         </nav>
     </header>
@@ -114,7 +114,7 @@ foreach ($products as $product) {
                             <button type="submit" class="add-cart-button">Add to Cart</button>
                         </form>
 
-                        <a href="pages/product.php" class="view-button">View Details</a>
+                        <a href="pages/product.php?id=<?php echo $product['id']; ?>" class="view-button">View Details</a>
                     </div>
 
                 </div>
@@ -157,7 +157,7 @@ foreach ($products as $product) {
             <div>
                 <h3>Quick Links</h3>
                 <a href="index.php">Home</a>
-                <a href="#products">Jerseys</a>
+                <a href="pages/jerseys.php">Jerseys</a>
                 <a href="pages/contact.php">Contact</a>
             </div>
 
