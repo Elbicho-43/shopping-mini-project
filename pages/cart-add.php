@@ -16,6 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
+    $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
     if ($selectedProduct != null) {
 
         if (!isset($_SESSION['cart'])) {
@@ -30,6 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             "size" => $size,
             "qty" => 1
         );
+
+        if ($isAjax) {
+            header("Content-Type: application/json");
+            echo json_encode(array(
+                "success" => true,
+                "product_name" => $selectedProduct['name'],
+                "cart_count" => count($_SESSION['cart'])
+            ));
+            exit;
+        }
+
+    } else {
+
+        if ($isAjax) {
+            header("Content-Type: application/json");
+            echo json_encode(array("success" => false));
+            exit;
+        }
 
     }
 

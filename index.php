@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 include "includes/data.php";
 
 $featuredProducts = array();
@@ -34,7 +36,12 @@ foreach ($products as $product) {
             </form>
 
             <div class="header-links">
-                <a href="pages/login.php">Login</a>
+                <?php if (isset($_SESSION['user_name'])) { ?>
+                    <span class="welcome-text">Hi, <?php echo $_SESSION['user_name']; ?></span>
+                    <a href="pages/logout.php">Logout</a>
+                <?php } else { ?>
+                    <a href="pages/login.php">Login</a>
+                <?php } ?>
                 <a href="pages/cart.php">Cart</a>
             </div>
 
@@ -44,6 +51,7 @@ foreach ($products as $product) {
             <a href="index.php">Home</a>
             <a href="#categories">Categories</a>
             <a href="pages/jerseys.php">Jerseys</a>
+            <a href="pages/track-order.php">Track Order</a>
             <a href="pages/contact.php">Contact</a>
         </nav>
     </header>
@@ -158,6 +166,7 @@ foreach ($products as $product) {
                 <h3>Quick Links</h3>
                 <a href="index.php">Home</a>
                 <a href="pages/jerseys.php">Jerseys</a>
+                <a href="pages/track-order.php">Track Order</a>
                 <a href="pages/contact.php">Contact</a>
             </div>
 
@@ -173,6 +182,6 @@ foreach ($products as $product) {
             <p>&copy; <?php echo date("Y"); ?> RG Retro. All Rights Reserved.</p>
         </div>
     </footer>
-
+<script src="js/cart.js"></script>
 </body>
 </html>

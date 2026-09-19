@@ -141,6 +141,6 @@ foreach ($products as $product) {
             <p>&copy; <?php echo date("Y"); ?> RG Retro. All Rights Reserved.</p>
         </div>
     </footer>
-
+<script src="../js/cart.js"></script>
 </body>
 </html>

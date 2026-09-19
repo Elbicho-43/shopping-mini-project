@@ -51,7 +51,8 @@ foreach ($_SESSION['cart'] as $item) {
         <nav>
             <a href="../index.php">Home</a>
             <a href="../index.php#categories">Categories</a>
-            <a href="../index.php#products">Jerseys</a>
+            <a href="jerseys.php">Jerseys</a>
+            <a href="track-order.php">Track Order</a>
             <a href="contact.php">Contact</a>
         </nav>
     </header>
@@ -65,7 +66,7 @@ foreach ($_SESSION['cart'] as $item) {
 
             <p class="section-text">Your cart is empty. Go add some jerseys!</p>
             <p style="text-align:center;">
-                <a href="../index.php#products" class="shop-button">Shop Jerseys</a>
+                <a href="jerseys.php" class="shop-button">Shop Jerseys</a>
             </p>
 
         <?php } else { ?>
@@ -113,7 +114,7 @@ foreach ($_SESSION['cart'] as $item) {
             <div>
                 <h3>Quick Links</h3>
                 <a href="../index.php">Home</a>
-                <a href="../index.php#products">Jerseys</a>
+                <a href="jerseys.php">Jerseys</a>
                 <a href="contact.php">Contact</a>
             </div>
             <div>
