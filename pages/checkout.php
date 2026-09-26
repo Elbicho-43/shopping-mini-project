@@ -14,7 +14,7 @@ if (!isset($_SESSION['applied_coupon'])) {
 
 $couponMessage = "";
 
-// Handle "Apply Coupon" button
+// ===== Handle "Apply Coupon" button =====
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['apply_coupon'])) {
 
     $enteredCode = mysqli_real_escape_string($conn, trim($_POST['coupon_code']));
@@ -35,28 +35,102 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['apply_coupon'])) {
 
 }
 
-// Work out current cart totals (used both for display and for placing the order)
 $orderItems = $_SESSION['cart'];
-$subtotal = 0;
 
+// ===== STAGE 1: Subtotal (sum of all item prices, discounts already applied per-jersey) =====
+$subtotal = 0;
 foreach ($orderItems as $item) {
     $subtotal += $item['price'];
 }
 
-$discountPercent = $_SESSION['applied_coupon'] != null ? $_SESSION['applied_coupon']['discount_percent'] : 0;
+// ===== STAGE 2: "Same Jersey x2" discount — 10% off items where the same jersey appears 2+ times =====
+$productCounts = array();
+foreach ($orderItems as $item) {
+    $pid = $item['id'];
+    if (!isset($productCounts[$pid])) {
+        $productCounts[$pid] = array("count" => 0, "total" => 0);
+    }
+    $productCounts[$pid]['count'] += 1;
+    $productCounts[$pid]['total'] += $item['price'];
+}
+
+$sameJerseyDiscount = 0;
+foreach ($productCounts as $pid => $info) {
+    if ($info['count'] >= 2) {
+        $sameJerseyDiscount += round($info['total'] * 0.10);
+    }
+}
+
+$afterSameJersey = $subtotal - $sameJerseyDiscount;
+
+// ===== STAGE 3: Bulk quantity discount — based on total number of jerseys in the order =====
+$itemCount = count($orderItems);
+$bulkPercent = 0;
+
+if ($itemCount >= 5) {
+    $bulkPercent = 15;
+} elseif ($itemCount == 4) {
+    $bulkPercent = 10;
+} elseif ($itemCount == 3) {
+    $bulkPercent = 5;
+}
+
+$bulkDiscount = round($afterSameJersey * $bulkPercent / 100);
+$afterBulk = $afterSameJersey - $bulkDiscount;
+
+// ===== STAGE 4: First/second order loyalty discount (logged-in customers only) =====
+$loyaltyPercent = 0;
+$loyaltyLabel = "";
+
+if (isset($_SESSION['user_id'])) {
+
+    $userId = (int)$_SESSION['user_id'];
+    $countQuery = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM orders WHERE user_id = $userId");
+    $countRow = mysqli_fetch_assoc($countQuery);
+    $previousOrders = $countRow['cnt'];
+
+    if ($previousOrders == 0) {
+        $loyaltyPercent = 15;
+        $loyaltyLabel = "First Order Discount";
+    } elseif ($previousOrders == 1) {
+        $loyaltyPercent = 10;
+        $loyaltyLabel = "Second Order Discount";
+    }
+
+}
+
+$loyaltyDiscount = round($afterBulk * $loyaltyPercent / 100);
+$afterLoyalty = $afterBulk - $loyaltyDiscount;
+
+// ===== STAGE 5: Coupon code (applied last, on whatever remains) =====
+$couponPercent = $_SESSION['applied_coupon'] != null ? $_SESSION['applied_coupon']['discount_percent'] : 0;
 $couponCodeUsed = $_SESSION['applied_coupon'] != null ? $_SESSION['applied_coupon']['code'] : null;
-$discountAmount = round($subtotal * $discountPercent / 100);
-$orderTotal = $subtotal - $discountAmount;
+$couponDiscount = round($afterLoyalty * $couponPercent / 100);
+
+// ===== STAGE 6: GST (added on top of whatever remains after all discounts) =====
+$totalAfterDiscounts = $afterLoyalty - $couponDiscount;
+
+$gstPercent = 5;
+$gstAmount = round($totalAfterDiscounts * $gstPercent / 100);
+
+$orderTotal = $totalAfterDiscounts + $gstAmount;
+
+$totalDiscountAmount = $subtotal - $totalAfterDiscounts;
 
 $orderPlaced = false;
 $orderNumber = "";
+$transactionId = "";
 $placedOrderItems = array();
 $placedSubtotal = 0;
-$placedDiscount = 0;
+$placedDiscountBreakdown = array();
 $placedTotal = 0;
-$placedCoupon = null;
+$placedPaymentMethod = "";
+$placedPaymentDetail = "";
+$placedAfterDiscount = 0;
+$placedGstAmount = 0;
+$placedGstPercent = 0;
 
-// Handle "Place Order" button
+// ===== Handle "Place Order" button =====
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && count($orderItems) > 0) {
 
     $customerName = mysqli_real_escape_string($conn, $_POST['name']);
@@ -64,11 +138,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
     $customerAddress = mysqli_real_escape_string($conn, $_POST['address']);
     $paymentMethod = mysqli_real_escape_string($conn, $_POST['payment_method']);
 
+    $paymentDetail = "";
+    $transactionId = "";
+
+    if ($paymentMethod == "UPI") {
+        $enteredUpi = isset($_POST['upi_id']) ? trim($_POST['upi_id']) : "";
+        $paymentDetail = $enteredUpi != "" ? $enteredUpi : "Not provided";
+        $transactionId = "TXN" . rand(100000, 999999);
+    } elseif ($paymentMethod == "Net Banking") {
+        $enteredBank = isset($_POST['bank_name']) ? $_POST['bank_name'] : "Not selected";
+        $paymentDetail = $enteredBank;
+        $transactionId = "TXN" . rand(100000, 999999);
+    } else {
+        $paymentDetail = "Pay on delivery";
+        $transactionId = "";
+    }
+
+    $paymentDetailSafe = mysqli_real_escape_string($conn, $paymentDetail);
+    $transactionIdSafe = mysqli_real_escape_string($conn, $transactionId);
+
     $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : "NULL";
     $couponSqlValue = $couponCodeUsed != null ? "'" . mysqli_real_escape_string($conn, $couponCodeUsed) . "'" : "NULL";
 
-    $insertOrder = "INSERT INTO orders (order_number, user_id, customer_name, phone, address, payment_method, total_amount, status, coupon_code, discount_amount)
-                     VALUES ('TEMP', $userId, '$customerName', '$customerPhone', '$customerAddress', '$paymentMethod', $orderTotal, 'Placed', $couponSqlValue, $discountAmount)";
+    $insertOrder = "INSERT INTO orders (order_number, user_id, customer_name, phone, address, payment_method, payment_detail, transaction_id, total_amount, status, coupon_code, discount_amount, gst_amount)
+                     VALUES ('TEMP', $userId, '$customerName', '$customerPhone', '$customerAddress', '$paymentMethod', '$paymentDetailSafe', '$transactionIdSafe', $orderTotal, 'Placed', $couponSqlValue, $totalDiscountAmount, $gstAmount)";
 
     mysqli_query($conn, $insertOrder);
     $newOrderId = mysqli_insert_id($conn);
@@ -91,9 +184,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
     $orderPlaced = true;
     $placedOrderItems = $orderItems;
     $placedSubtotal = $subtotal;
-    $placedDiscount = $discountAmount;
     $placedTotal = $orderTotal;
-    $placedCoupon = $couponCodeUsed;
+    $placedPaymentMethod = $paymentMethod;
+    $placedPaymentDetail = $paymentDetail;
+    $transactionId = $transactionId;
+    $placedAfterDiscount = $totalAfterDiscounts;
+    $placedGstAmount = $gstAmount;
+    $placedGstPercent = $gstPercent;
+
+    $placedDiscountBreakdown = array(
+        "sameJersey" => $sameJerseyDiscount,
+        "bulk" => array("percent" => $bulkPercent, "amount" => $bulkDiscount),
+        "loyalty" => array("label" => $loyaltyLabel, "percent" => $loyaltyPercent, "amount" => $loyaltyDiscount),
+        "coupon" => array("code" => $couponCodeUsed, "amount" => $couponDiscount)
+    );
 
     $_SESSION['cart'] = array();
     $_SESSION['applied_coupon'] = null;
@@ -151,10 +255,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
 
                 <p class="order-number">Order Number: <strong><?php echo $orderNumber; ?></strong></p>
 
+                <?php if ($transactionId != "") { ?>
+                    <p class="section-text">Transaction ID: <strong><?php echo $transactionId; ?></strong> — <span style="color:#1fa66b; font-weight:bold;">Payment Successful</span></p>
+                <?php } ?>
+
                 <p class="section-text">
-                    Thank you for shopping with RG Retro. Save your order number above —
-                    you can use it anytime on our <a href="track-order.php">Track Order</a> page
-                    to check your delivery status.
+                    Payment Method: <strong><?php echo $placedPaymentMethod; ?></strong>
+                    <?php if ($placedPaymentDetail != "" && $placedPaymentMethod != "Cash on Delivery") { ?>
+                        (<?php echo $placedPaymentDetail; ?>)
+                    <?php } ?>
+                </p>
+
+                <p class="section-text">
+                    Save your order number above — you can use it anytime on our
+                    <a href="track-order.php">Track Order</a> page to check your delivery status.
                 </p>
 
                 <div class="cart-table">
@@ -173,10 +287,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
 
                 <div class="cart-total">
                     <p>Subtotal: ₹<?php echo $placedSubtotal; ?></p>
-                    <?php if ($placedCoupon != null) { ?>
-                        <p style="color:#1fa66b;">Coupon "<?php echo $placedCoupon; ?>" applied: -₹<?php echo $placedDiscount; ?></p>
+
+                    <?php if ($placedDiscountBreakdown['sameJersey'] > 0) { ?>
+                        <p style="color:#1fa66b;">Same Jersey Discount: -₹<?php echo $placedDiscountBreakdown['sameJersey']; ?></p>
                     <?php } ?>
-                    <h3>Total Paid on Delivery: ₹<?php echo $placedTotal; ?></h3>
+
+                    <?php if ($placedDiscountBreakdown['bulk']['percent'] > 0) { ?>
+                        <p style="color:#1fa66b;">Bulk Order Discount (<?php echo $placedDiscountBreakdown['bulk']['percent']; ?>%): -₹<?php echo $placedDiscountBreakdown['bulk']['amount']; ?></p>
+                    <?php } ?>
+
+                    <?php if ($placedDiscountBreakdown['loyalty']['percent'] > 0) { ?>
+                        <p style="color:#1fa66b;"><?php echo $placedDiscountBreakdown['loyalty']['label']; ?> (<?php echo $placedDiscountBreakdown['loyalty']['percent']; ?>%): -₹<?php echo $placedDiscountBreakdown['loyalty']['amount']; ?></p>
+                    <?php } ?>
+
+                    <?php if ($placedDiscountBreakdown['coupon']['code'] != null) { ?>
+                        <p style="color:#1fa66b;">Coupon "<?php echo $placedDiscountBreakdown['coupon']['code']; ?>": -₹<?php echo $placedDiscountBreakdown['coupon']['amount']; ?></p>
+                    <?php } ?>
+
+                    <p>Subtotal after discounts: ₹<?php echo $placedAfterDiscount; ?></p>
+                    <p>GST (<?php echo $placedGstPercent; ?>%): +₹<?php echo $placedGstAmount; ?></p>
+                    <h3>Total Paid: ₹<?php echo $placedTotal; ?></h3>
                     <a href="jerseys.php" class="shop-button">Continue Shopping</a>
                 </div>
 
@@ -231,10 +361,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
 
                     <div class="cart-total">
                         <p>Subtotal: ₹<?php echo $subtotal; ?></p>
-                        <?php if ($discountPercent > 0) { ?>
-                            <p style="color:#1fa66b;">Discount (<?php echo $couponCodeUsed; ?>): -₹<?php echo $discountAmount; ?></p>
+
+                        <?php if ($sameJerseyDiscount > 0) { ?>
+                            <p style="color:#1fa66b;">Same Jersey Discount: -₹<?php echo $sameJerseyDiscount; ?></p>
                         <?php } ?>
-                        <h3>Total: ₹<?php echo $orderTotal; ?></h3>
+
+                        <?php if ($bulkPercent > 0) { ?>
+                            <p style="color:#1fa66b;">Bulk Order Discount (<?php echo $bulkPercent; ?>%): -₹<?php echo $bulkDiscount; ?></p>
+                        <?php } ?>
+
+                        <?php if ($loyaltyPercent > 0) { ?>
+                            <p style="color:#1fa66b;"><?php echo $loyaltyLabel; ?> (<?php echo $loyaltyPercent; ?>%): -₹<?php echo $loyaltyDiscount; ?></p>
+                        <?php } ?>
+
+                        <?php if ($couponPercent > 0) { ?>
+                            <p style="color:#1fa66b;">Coupon (<?php echo $couponCodeUsed; ?>): -₹<?php echo $couponDiscount; ?></p>
+                        <?php } ?>
+
+                        <p>Subtotal after discounts: ₹<?php echo $totalAfterDiscounts; ?></p>
+                        <p>GST (<?php echo $gstPercent; ?>%): +₹<?php echo $gstAmount; ?></p>
+                        <h3>Total (incl. GST): ₹<?php echo $orderTotal; ?></h3>
                     </div>
                 </div>
 
@@ -258,11 +404,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && coun
                                 <input type="radio" name="payment_method" value="UPI">
                                 UPI
                             </label>
+                            <input type="text" name="upi_id" placeholder="Your UPI ID (e.g. name@upi)" class="payment-sub-input">
 
                             <label class="payment-choice">
                                 <input type="radio" name="payment_method" value="Net Banking">
                                 Net Banking
                             </label>
+                            <select name="bank_name" class="payment-sub-input">
+                                <option value="">Select your bank</option>
+                                <option value="State Bank of India">State Bank of India</option>
+                                <option value="HDFC Bank">HDFC Bank</option>
+                                <option value="ICICI Bank">ICICI Bank</option>
+                                <option value="Axis Bank">Axis Bank</option>
+                                <option value="Other">Other</option>
+                            </select>
+
+                            <p class="payment-note">Payments are simulated for demo purposes — no real money is charged.</p>
                         </div>
 
                         <button type="submit" name="place_order" value="1" class="shop-button">Place Order</button>

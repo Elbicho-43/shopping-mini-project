@@ -29,7 +29,7 @@ foreach ($products as $product) {
                 </a>
             </div>
 
-                   <div class="search-wrapper">
+            <div class="search-wrapper">
                 <form class="search-box" action="../index.php" method="get" autocomplete="off">
                     <input type="text" name="search" placeholder="Search jerseys...">
                     <button type="submit">🔍</button>
@@ -47,6 +47,7 @@ foreach ($products as $product) {
             <a href="../index.php">Home</a>
             <a href="../index.php#categories">Categories</a>
             <a href="jerseys.php">Jerseys</a>
+            <a href="track-order.php">Track Order</a>
             <a href="contact.php">Contact</a>
         </nav>
     </header>
@@ -60,7 +61,12 @@ foreach ($products as $product) {
             <a href="jerseys.php" class="shop-button">Browse All Jerseys</a>
         </section>
 
-    <?php } else { ?>
+    <?php } else {
+
+        $hasBack = !empty($selectedProduct['back_image']);
+        $hasLogo = !empty($selectedProduct['logo_image']);
+
+    ?>
 
         <section class="product-detail-section">
 
@@ -72,7 +78,46 @@ foreach ($products as $product) {
                     <?php } elseif ($selectedProduct['badge'] == "Bestseller") { ?>
                         <span class="badge badge-bestseller">Bestseller</span>
                     <?php } ?>
-                    <img src="../<?php echo $selectedProduct['image']; ?>" alt="<?php echo $selectedProduct['name']; ?>">
+
+                    <div class="product-gallery">
+
+                        <input type="radio" name="productGallery" id="galleryFront" class="gallery-radio" checked>
+                        <?php if ($hasBack) { ?>
+                            <input type="radio" name="productGallery" id="galleryBack" class="gallery-radio">
+                        <?php } ?>
+                        <?php if ($hasLogo) { ?>
+                            <input type="radio" name="productGallery" id="galleryLogo" class="gallery-radio">
+                        <?php } ?>
+
+                        <div class="gallery-main">
+                            <img src="../<?php echo $selectedProduct['image']; ?>" alt="<?php echo $selectedProduct['name']; ?> front" class="gallery-img gallery-img-front">
+                            <?php if ($hasBack) { ?>
+                                <img src="../<?php echo $selectedProduct['back_image']; ?>" alt="<?php echo $selectedProduct['name']; ?> back" class="gallery-img gallery-img-back">
+                            <?php } ?>
+                            <?php if ($hasLogo) { ?>
+                                <img src="../<?php echo $selectedProduct['logo_image']; ?>" alt="<?php echo $selectedProduct['name']; ?> logo" class="gallery-img gallery-img-logo">
+                            <?php } ?>
+                        </div>
+
+                        <?php if ($hasBack || $hasLogo) { ?>
+                            <div class="gallery-thumbs">
+                                <label for="galleryFront" class="gallery-thumb-label gallery-thumb-front">
+                                    <img src="../<?php echo $selectedProduct['image']; ?>" alt="Front view">
+                                </label>
+                                <?php if ($hasBack) { ?>
+                                    <label for="galleryBack" class="gallery-thumb-label gallery-thumb-back">
+                                        <img src="../<?php echo $selectedProduct['back_image']; ?>" alt="Back view">
+                                    </label>
+                                <?php } ?>
+                                <?php if ($hasLogo) { ?>
+                                    <label for="galleryLogo" class="gallery-thumb-label gallery-thumb-logo">
+                                        <img src="../<?php echo $selectedProduct['logo_image']; ?>" alt="Logo close-up">
+                                    </label>
+                                <?php } ?>
+                            </div>
+                        <?php } ?>
+
+                    </div>
                 </div>
 
                 <div class="product-detail-info">
@@ -85,7 +130,7 @@ foreach ($products as $product) {
 
                     <p class="product-detail-category">Category: <?php echo $selectedProduct['category']; ?></p>
 
-                                      <?php if ($selectedProduct['discount_percent'] > 0) { ?>
+                    <?php if ($selectedProduct['discount_percent'] > 0) { ?>
                         <p class="price">
                             <span class="original-price">₹<?php echo $selectedProduct['original_price_value']; ?></span>
                             <?php echo $selectedProduct['price']; ?>
@@ -152,7 +197,8 @@ foreach ($products as $product) {
             <p>&copy; <?php echo date("Y"); ?> RG Retro. All Rights Reserved.</p>
         </div>
     </footer>
-<script src="../js/cart.js"></script>
-<script src="../js/search-suggest.js"></script>
+
+    <script src="../js/cart.js"></script>
+    <script src="../js/search-suggest.js"></script>
 </body>
 </html>

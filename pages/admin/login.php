@@ -41,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <section class="contact-section" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column;">
 
+        <a href="../../index.php" class="back-home-link">&larr; Back to Website</a>
+
         <h2>Admin Login</h2>
         <p class="section-text">RG Retro Management Panel</p>
 

@@ -33,6 +33,8 @@ while ($row = mysqli_fetch_assoc($prodResult)) {
         "original_price_value" => $originalPrice,
         "discount_percent" => $discount,
         "image" => $row['image'],
+        "back_image" => $row['back_image'],
+        "logo_image" => $row['logo_image'],
         "badge" => $row['badge'],
         "featured" => $row['featured'] == 1 ? true : false,
         "description" => $row['description'],

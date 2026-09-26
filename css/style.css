@@ -1468,6 +1468,143 @@ footer {
     z-index: 2;
 }
 
+.back-home-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #123b82;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.back-home-link:hover {
+    color: #e3262e;
+}
+
+/* COUPON BOX */
+.coupon-box { margin: 15px 0; }
+.coupon-box form { display: flex; gap: 8px; }
+.coupon-box input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.coupon-message {
+    font-size: 13px;
+    color: #123b82;
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+/* PAYMENT SUB-FIELDS (UPI ID / Bank select) */
+.payment-sub-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 4px 0 8px;
+}
+
+/* COLORFUL BACKGROUND REFRESH */
+
+body {
+    background: linear-gradient(180deg, #f4f7fb 0%, #eef2fb 45%, #f8f4fb 100%);
+}
+
+.categories {
+    background: linear-gradient(135deg, #eef4ff 0%, #ffffff 100%);
+}
+
+.about {
+    background: linear-gradient(135deg, #fff8e8 0%, #ffffff 100%);
+}
+
+.checkout-section,
+.admin-section {
+    background: linear-gradient(135deg, #f4f7fb 0%, #eef2fb 100%);
+}
+
+/* PRODUCT IMAGE GALLERY (pure CSS — no JavaScript) */
+
+.gallery-radio {
+    display: none;
+}
+
+.gallery-main {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: #f4f7fb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.gallery-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-img-front {
+    opacity: 1;
+}
+
+#galleryBack:checked ~ .gallery-main .gallery-img-front,
+#galleryLogo:checked ~ .gallery-main .gallery-img-front {
+    opacity: 0;
+}
+
+#galleryBack:checked ~ .gallery-main .gallery-img-back {
+    opacity: 1;
+}
+
+#galleryLogo:checked ~ .gallery-main .gallery-img-logo {
+    opacity: 1;
+}
+
+.gallery-thumbs {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.gallery-thumb-label {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.gallery-thumb-label img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-thumb-front {
+    border-color: #123b82;
+}
+
+#galleryBack:checked ~ .gallery-thumbs .gallery-thumb-front,
+#galleryLogo:checked ~ .gallery-thumbs .gallery-thumb-front {
+    border-color: #ddd;
+}
+
+#galleryBack:checked ~ .gallery-thumbs .gallery-thumb-back,
+#galleryLogo:checked ~ .gallery-thumbs .gallery-thumb-logo {
+    border-color: #123b82;
+}
+
 /* MOBILE */
 
 @media screen and (max-width: 900px) {
