@@ -1604,6 +1604,10 @@ body {
 #galleryLogo:checked ~ .gallery-thumbs .gallery-thumb-logo {
     border-color: #123b82;
 }
+.product-gallery {
+    width: 100%;
+}
+
 
 /* MOBILE */
 
