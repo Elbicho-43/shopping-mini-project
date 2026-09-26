@@ -52,10 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </a>
             </div>
 
-            <form class="search-box" action="../index.php" method="get">
-                <input type="text" name="search" placeholder="Search jerseys...">
-                <button type="submit">Search</button>
-            </form>
+            <div class="search-wrapper">
+                <form class="search-box" action="../index.php" method="get" autocomplete="off">
+                    <input type="text" name="search" placeholder="Search jerseys...">
+                    <button type="submit">🔍</button>
+                </form>
+                <div class="search-suggestions"></div>
+            </div>
 
             <div class="header-links">
                 <a href="login.php">Login</a>
@@ -91,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </form>
 
             <p class="auth-switch">Don't have an account? <a href="register.php">Register here</a></p>
+            <p class="auth-switch">Are you an admin? <a href="admin/login.php">Admin Login</a></p>
 
         </div>
 

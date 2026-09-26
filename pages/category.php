@@ -30,10 +30,13 @@ foreach ($products as $product) {
                 </a>
             </div>
 
-            <form class="search-box" action="../index.php" method="get">
-                <input type="text" name="search" placeholder="Search jerseys...">
-                <button type="submit">Search</button>
-            </form>
+                       <div class="search-wrapper">
+                <form class="search-box" action="../index.php" method="get" autocomplete="off">
+                    <input type="text" name="search" placeholder="Search jerseys...">
+                    <button type="submit">🔍</button>
+                </form>
+                <div class="search-suggestions"></div>
+            </div>
 
             <div class="header-links">
                 <a href="login.php">Login</a>
@@ -141,5 +144,6 @@ foreach ($products as $product) {
         </div>
     </footer>
 <script src="../js/cart.js"></script>
+<script src="../js/search-suggest.js"></script>
 </body>
 </html>

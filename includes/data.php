@@ -18,17 +18,25 @@ $products = array();
 $prodResult = mysqli_query($conn, "SELECT * FROM products ORDER BY id ASC");
 
 while ($row = mysqli_fetch_assoc($prodResult)) {
+
+    $originalPrice = $row['price_value'];
+    $discount = $row['discount_percent'];
+    $finalPrice = $discount > 0 ? round($originalPrice - ($originalPrice * $discount / 100)) : $originalPrice;
+
     $products[] = array(
         "id" => $row['id'],
         "name" => $row['name'],
         "edition" => $row['edition'],
         "category" => $row['category'],
-        "price" => "₹" . $row['price_value'],
-        "price_value" => $row['price_value'],
+        "price" => "₹" . $finalPrice,
+        "price_value" => $finalPrice,
+        "original_price_value" => $originalPrice,
+        "discount_percent" => $discount,
         "image" => $row['image'],
         "badge" => $row['badge'],
         "featured" => $row['featured'] == 1 ? true : false,
-        "description" => $row['description']
+        "description" => $row['description'],
+        "stock" => $row['stock']
     );
 }
 

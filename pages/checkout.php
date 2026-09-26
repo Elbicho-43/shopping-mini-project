@@ -8,37 +8,74 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = array();
 }
 
+if (!isset($_SESSION['applied_coupon'])) {
+    $_SESSION['applied_coupon'] = null;
+}
+
+$couponMessage = "";
+
+// Handle "Apply Coupon" button
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['apply_coupon'])) {
+
+    $enteredCode = mysqli_real_escape_string($conn, trim($_POST['coupon_code']));
+
+    $couponQuery = mysqli_query($conn, "SELECT * FROM coupons WHERE code = '$enteredCode' AND active = 1");
+
+    if (mysqli_num_rows($couponQuery) > 0) {
+        $coupon = mysqli_fetch_assoc($couponQuery);
+        $_SESSION['applied_coupon'] = array(
+            "code" => $coupon['code'],
+            "discount_percent" => $coupon['discount_percent']
+        );
+        $couponMessage = "Coupon applied! " . $coupon['discount_percent'] . "% off your order.";
+    } else {
+        $_SESSION['applied_coupon'] = null;
+        $couponMessage = "Invalid or expired coupon code.";
+    }
+
+}
+
+// Work out current cart totals (used both for display and for placing the order)
+$orderItems = $_SESSION['cart'];
+$subtotal = 0;
+
+foreach ($orderItems as $item) {
+    $subtotal += $item['price'];
+}
+
+$discountPercent = $_SESSION['applied_coupon'] != null ? $_SESSION['applied_coupon']['discount_percent'] : 0;
+$couponCodeUsed = $_SESSION['applied_coupon'] != null ? $_SESSION['applied_coupon']['code'] : null;
+$discountAmount = round($subtotal * $discountPercent / 100);
+$orderTotal = $subtotal - $discountAmount;
+
 $orderPlaced = false;
 $orderNumber = "";
-$orderItems = array();
-$orderTotal = 0;
+$placedOrderItems = array();
+$placedSubtotal = 0;
+$placedDiscount = 0;
+$placedTotal = 0;
+$placedCoupon = null;
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
-
-    $orderItems = $_SESSION['cart'];
-
-    foreach ($orderItems as $item) {
-        $orderTotal += $item['price'];
-    }
+// Handle "Place Order" button
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order']) && count($orderItems) > 0) {
 
     $customerName = mysqli_real_escape_string($conn, $_POST['name']);
     $customerPhone = mysqli_real_escape_string($conn, $_POST['phone']);
     $customerAddress = mysqli_real_escape_string($conn, $_POST['address']);
     $paymentMethod = mysqli_real_escape_string($conn, $_POST['payment_method']);
 
-    // Insert the order first (temporary order_number, fixed right after)
-    $insertOrder = "INSERT INTO orders (order_number, customer_name, phone, address, payment_method, total_amount, status)
-                     VALUES ('TEMP', '$customerName', '$customerPhone', '$customerAddress', '$paymentMethod', $orderTotal, 'Placed')";
+    $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : "NULL";
+    $couponSqlValue = $couponCodeUsed != null ? "'" . mysqli_real_escape_string($conn, $couponCodeUsed) . "'" : "NULL";
+
+    $insertOrder = "INSERT INTO orders (order_number, user_id, customer_name, phone, address, payment_method, total_amount, status, coupon_code, discount_amount)
+                     VALUES ('TEMP', $userId, '$customerName', '$customerPhone', '$customerAddress', '$paymentMethod', $orderTotal, 'Placed', $couponSqlValue, $discountAmount)";
 
     mysqli_query($conn, $insertOrder);
     $newOrderId = mysqli_insert_id($conn);
 
-    // Build a real, unique order number using the auto-increment id
     $orderNumber = "RG" . date("ymd") . str_pad($newOrderId, 4, "0", STR_PAD_LEFT);
-
     mysqli_query($conn, "UPDATE orders SET order_number = '$orderNumber' WHERE id = $newOrderId");
 
-    // Insert each cart item into order_items
     foreach ($orderItems as $item) {
         $itemName = mysqli_real_escape_string($conn, $item['name']);
         $itemSize = mysqli_real_escape_string($conn, $item['size']);
@@ -52,16 +89,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
     }
 
     $orderPlaced = true;
+    $placedOrderItems = $orderItems;
+    $placedSubtotal = $subtotal;
+    $placedDiscount = $discountAmount;
+    $placedTotal = $orderTotal;
+    $placedCoupon = $couponCodeUsed;
 
     $_SESSION['cart'] = array();
-
-} else {
-
-    $orderItems = $_SESSION['cart'];
-
-    foreach ($orderItems as $item) {
-        $orderTotal += $item['price'];
-    }
+    $_SESSION['applied_coupon'] = null;
 
 }
 
@@ -82,10 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
                 </a>
             </div>
 
-            <form class="search-box" action="../index.php" method="get">
-                <input type="text" name="search" placeholder="Search jerseys...">
-                <button type="submit">Search</button>
-            </form>
+            <div class="search-wrapper">
+                <form class="search-box" action="../index.php" method="get" autocomplete="off">
+                    <input type="text" name="search" placeholder="Search jerseys...">
+                    <button type="submit">🔍</button>
+                </form>
+                <div class="search-suggestions"></div>
+            </div>
 
             <div class="header-links">
                 <a href="login.php">Login</a>
@@ -97,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
             <a href="../index.php">Home</a>
             <a href="../index.php#categories">Categories</a>
             <a href="jerseys.php">Jerseys</a>
+            <a href="track-order.php">Track Order</a>
             <a href="contact.php">Contact</a>
         </nav>
     </header>
@@ -119,29 +158,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
                 </p>
 
                 <div class="cart-table">
-
-                    <?php foreach ($orderItems as $item) { ?>
-
+                    <?php foreach ($placedOrderItems as $item) { ?>
                         <div class="cart-row">
-
                             <img src="../<?php echo $item['image']; ?>" alt="<?php echo $item['name']; ?>" class="cart-img">
-
                             <div class="cart-info">
                                 <h3><?php echo $item['name']; ?></h3>
                                 <p>Size: <?php echo $item['size']; ?></p>
                                 <p>Qty: <?php echo $item['qty']; ?></p>
                             </div>
-
                             <p class="cart-price">₹<?php echo $item['price']; ?></p>
-
                         </div>
-
                     <?php } ?>
-
                 </div>
 
                 <div class="cart-total">
-                    <h3>Total: ₹<?php echo $orderTotal; ?></h3>
+                    <p>Subtotal: ₹<?php echo $placedSubtotal; ?></p>
+                    <?php if ($placedCoupon != null) { ?>
+                        <p style="color:#1fa66b;">Coupon "<?php echo $placedCoupon; ?>" applied: -₹<?php echo $placedDiscount; ?></p>
+                    <?php } ?>
+                    <h3>Total Paid on Delivery: ₹<?php echo $placedTotal; ?></h3>
                     <a href="jerseys.php" class="shop-button">Continue Shopping</a>
                 </div>
 
@@ -184,7 +219,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
                         <?php } ?>
                     </div>
 
+                    <div class="coupon-box">
+                        <form action="checkout.php" method="post">
+                            <input type="text" name="coupon_code" placeholder="Enter coupon code" value="<?php echo $couponCodeUsed != null ? $couponCodeUsed : ''; ?>">
+                            <button type="submit" name="apply_coupon" value="1" class="admin-save-btn">Apply</button>
+                        </form>
+                        <?php if ($couponMessage != "") { ?>
+                            <p class="coupon-message"><?php echo $couponMessage; ?></p>
+                        <?php } ?>
+                    </div>
+
                     <div class="cart-total">
+                        <p>Subtotal: ₹<?php echo $subtotal; ?></p>
+                        <?php if ($discountPercent > 0) { ?>
+                            <p style="color:#1fa66b;">Discount (<?php echo $couponCodeUsed; ?>): -₹<?php echo $discountAmount; ?></p>
+                        <?php } ?>
                         <h3>Total: ₹<?php echo $orderTotal; ?></h3>
                     </div>
                 </div>
@@ -216,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && count($_SESSION['cart']) > 0) {
                             </label>
                         </div>
 
-                        <button type="submit" class="shop-button">Place Order</button>
+                        <button type="submit" name="place_order" value="1" class="shop-button">Place Order</button>
                     </form>
                 </div>
 

@@ -29,10 +29,13 @@ foreach ($products as $product) {
                 </a>
             </div>
 
-            <form class="search-box" action="../index.php" method="get">
-                <input type="text" name="search" placeholder="Search jerseys...">
-                <button type="submit">Search</button>
-            </form>
+                   <div class="search-wrapper">
+                <form class="search-box" action="../index.php" method="get" autocomplete="off">
+                    <input type="text" name="search" placeholder="Search jerseys...">
+                    <button type="submit">🔍</button>
+                </form>
+                <div class="search-suggestions"></div>
+            </div>
 
             <div class="header-links">
                 <a href="login.php">Login</a>
@@ -82,7 +85,15 @@ foreach ($products as $product) {
 
                     <p class="product-detail-category">Category: <?php echo $selectedProduct['category']; ?></p>
 
-                    <p class="price"><?php echo $selectedProduct['price']; ?></p>
+                                      <?php if ($selectedProduct['discount_percent'] > 0) { ?>
+                        <p class="price">
+                            <span class="original-price">₹<?php echo $selectedProduct['original_price_value']; ?></span>
+                            <?php echo $selectedProduct['price']; ?>
+                            <span class="discount-tag"><?php echo $selectedProduct['discount_percent']; ?>% OFF</span>
+                        </p>
+                    <?php } else { ?>
+                        <p class="price"><?php echo $selectedProduct['price']; ?></p>
+                    <?php } ?>
 
                     <p class="product-detail-description">
                         <?php
@@ -142,5 +153,6 @@ foreach ($products as $product) {
         </div>
     </footer>
 <script src="../js/cart.js"></script>
+<script src="../js/search-suggest.js"></script>
 </body>
 </html>
